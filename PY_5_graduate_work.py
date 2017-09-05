@@ -64,14 +64,15 @@ logging.basicConfig(format=u'%(levelname)-8s [%(asctime)s] %(message)s', level=l
 
 VK_URL = 'https://api.vk.com/method/'
 VK_VERSION = 5.68
+SHORT_RUN = True # switcher for short running way - check 117 friends instead of 834 friends
 
 class VkFriends():
-    root_friend_id = None  # 5030613
+    root_friend_id = None  # root_vk_id = '5030613'
     root_friend_first_name = None
     root_friend_last_name = None
-    friend_count = 0
-    friend_id_list = []
-    friend_id_set = None
+    root_friend_count = 0
+    root_friend_id_list = []
+    root_friend_id_set = None
     groups_count = 0
     root_friend_groups_set = None
     different_group_set = None
@@ -92,23 +93,22 @@ class VkFriends():
         :return: <json> info about user (user_id).
         """
         self.root_friend_id = vk_id
-        params = {
-            'user_ids': self.root_friend_id,
-            'access_token': VK_ACCESS_TOKEN,
-            # 'count': 3,
-            'v': VK_VERSION
-        }
-        # https://api.vk.com/method/users.get?user_ids=5030613&fields=bdate&access_token=vk_access_token&v=5.68
-        response = requests.get('https://api.vk.com/method/users.get', params=params)
-        # print(response.status_code)
-        if response.status_code == requests.codes.ok:
-            self.print_dot()
-        else:
-            print(response.raise_for_status())
-        response_json = response.json()['response'][0]
+        # params = {
+        #     'user_ids': self.root_friend_id,
+        #     'access_token': VK_ACCESS_TOKEN,
+        #     # 'count': 3,
+        #     'v': VK_VERSION
+        # }
+        params = self.make_vk_params()
+        response_json = self._do_vk_request('users.get', params)
+        if not response_json:
+            print('Root friend ID is incorrect. Bye ...')
+            exit(0)
+
+        # response_json = response.json()['response'][0]
         self.root_friend_first_name = response_json['first_name']
         self.root_friend_last_name = response_json['last_name']
-        print('User {} is founded.'.format(self.root_friend_id))
+        print('Root friend {} is founded.'.format(self.root_friend_id))
         # print('His name is "{} {}".'.format(self.root_friend_first_name, self.root_friend_last_name))
 
     def make_vk_params(self, *args):
@@ -118,10 +118,8 @@ class VkFriends():
             'v': VK_VERSION
         }
         for i in args:
-            print(i)
             params.update(i.items())
         return params
-
 
     def print_dot(self):
         """
@@ -152,23 +150,24 @@ class VkFriends():
             # 'count': 117,
             'v': VK_VERSION
         }
+        if SHORT_RUN:
+            params['count'] = 117
+
         response = requests.get('https://api.vk.com/method/friends.get', params=params)
         if response.status_code == requests.codes.ok:
             self.print_dot()
         else:
             print(response.raise_for_status())
         response_json = response.json()['response']
-        self.friend_count = response_json['count']
+        self.root_friend_count = response_json['count']
         # print('self.friend_count =', self.friend_count)
-        self.friend_id_list = response_json['items']
-        self.friend_id_set = set(self.friend_id_list)
-        # print(
-        #     '{} {} have {} friends.'.format(self.root_friend_first_name, self.root_friend_last_name, self.friend_count))
+        self.root_friend_id_list = response_json['items']
+        self.root_friend_id_set = set(self.root_friend_id_list)
 
     def print_root_user_info(self):
         print('--------- info about root friend ---------')
         print('Name: {} {}'.format(self.root_friend_first_name, self.root_friend_last_name))
-        print('friend_count = {}'.format(self.friend_count))
+        print('friend_count = {}'.format(self.root_friend_count))
         # print('self.friend_id_list =', self.friend_id_set)
         print('groups_count = {}'.format(self.groups_count))
 
@@ -206,16 +205,16 @@ class VkFriends():
 
     def make_different_group_list(self):
         counter = 0
-        for friend_id in self.friend_id_set:
+        for friend_id in self.root_friend_id_set:
             if counter % 10 == 0:
-                print('Find exclusive groups: {} from {}'.format(counter, len(self.friend_id_set)))
+                print('Find exclusive groups: {} from {}'.format(counter, len(self.root_friend_id_set)))
             friend_groups_set_num, friend_groups_set = self.person_get_groups_set(vk_id=friend_id)
             counter += 1
             if friend_groups_set_num == 0:
                 continue
             self.root_friend_groups_set.difference_update(friend_groups_set)
 
-        print('Find exclusive groups completed: {} from {}'.format(counter, len(self.friend_id_set)))
+        print('Find exclusive groups completed: {} from {}'.format(counter, len(self.root_friend_id_set)))
         self.different_group_set = self.root_friend_groups_set
         print('Numbers of "tim_leary" exclusive groups: {}'.format(len(self.different_group_set)))
         logging.debug(u'Numbers of "tim_leary" exclusive groups: {}'.format(len(self.different_group_set)))
@@ -269,36 +268,60 @@ class VkFriends():
 
         print('Saving report to file.')
         with open('groups.json', 'w') as f:  # , encoding='utf-8'
-            json.dump(self.vk_group_result_list, f, ensure_ascii=False)
+            json.dump(self.vk_group_result_list, f)
+            # json.dump(self.vk_group_result_list, f, ensure_ascii=False)
+
         with open('groups.json.txt', 'w') as f:
-            json.dump(self.vk_group_result_list, f, ensure_ascii=False)
+            # json.dump(self.vk_group_result_list, f, ensure_ascii=False)
+            json.dump(self.vk_group_result_list, f)
         with open('groups.json.asci.txt', 'w') as f:
             json.dump(self.vk_group_result_list, f)
         print('Have done.')
 
-    def do_vk_groups_get_request(self, params):
-        return self.do_vk_request(self, 'groups.get', params)
+    def _do_vk_groups_get_request(self, params):
+        return self._do_vk_request(self, 'groups.get', params)
 
-    def do_vk_friends_get_request(self, params):
-        return self.do_vk_request(self, 'friends.get', params)
+    def _do_vk_friends_get_request(self, params):
+        return self._do_vk_request(self, 'friends.get', params)
 
-    def do_vk_request(self, method, params):
-        url = 'https://api.vk.com/method/'
-        sleep(0.400)
-        return requests.get(url + method, params=params)
+    def _do_vk_request(self, method, params):
+        any_vk_metods = ['users.get', 'friends.get', 'groups.get', 'groups.getMembers']
+        print('_do_vk_request() -> ', method)
+        if method in any_vk_metods:
+            sleep(0.400)
+            # response = requests.get('https://api.vk.com/method/users.get', params=params)
+            response = requests.get(VK_URL + method, params=params)
+            # print(response.status_code)
+            if response.status_code == requests.codes.ok:
+                response_json = response.json()['response'][0]
+            else:
+                print(response.raise_for_status())
+                return 0
+
+            # print(response.status_code)
+            # print(response_json)
+            if response_json['first_name'] == 'DELETED':
+                print('Root user was DELETED.')
+                return 0
+            else:
+                return response_json
+        else:
+            print('You try to call incorrect request "{}"'.format(method))
+            return 0
 
 
 def main():
     tim_leary_id = 5030613
     tim_leary = VkFriends(root_vk_id) #  root_vk_id = '5030613'
+    # tim_leary = VkFriends(50032764534200241237464765874659873465347856)
 
-    tim_leary.make_vk_params({'extended': 1})
-    # tim_leary.make_friend_id_list()
-    # tim_leary.root_friend_make_groups_set()
+    tim_leary.make_friend_id_list()
+
+    tim_leary.root_friend_make_groups_set()
+    tim_leary.print_root_user_info()
     # tim_leary.make_different_group_list()
 
-    # tim_leary.print_root_user_info()
-    tim_leary.make_report_to_file()
+    # tim_leary.make_report_to_file()
 
 
 if __name__ == '__main__':
