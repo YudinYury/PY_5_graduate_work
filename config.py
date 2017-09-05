@@ -1,7 +1,9 @@
-vk_access_token = "333f1570460ac01a118e6a5a61e5948dff7deb5d9c5311f81f4e2fd1f9094739c601388618a4ff837ed19"
+VK_ACCESS_TOKEN = "333f1570460ac01a118e6a5a61e5948dff7deb5d9c5311f81f4e2fd1f9094739c601388618a4ff837ed19"
 
 vk_login = '79100889800'
 vk_password = '33129337'
+
+root_vk_id = '5030613'
 
 vk_json = {
     "app_name": "test_API",

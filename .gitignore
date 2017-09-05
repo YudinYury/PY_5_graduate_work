@@ -1,6 +1,6 @@
 .idea
 __pycache__
-comments.txt
-groups.json
-groups.json.txt
-graduate_work.log
+config.py
+*.txt
+*.json
+*.log
