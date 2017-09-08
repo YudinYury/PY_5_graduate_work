@@ -373,21 +373,33 @@ class VkFriends():
             print('You try to call incorrect request "{}"'.format(method))
             return 0
 
-        sleep(0.335)
-        # response = requests.get('https://api.vk.com/method/users.get', params=params)
-        response = requests.get(VK_URL + method, params=params)
-        if response.status_code == requests.codes.ok:
-            response_json = response.json()
-            request_have_done = True
+        # sleep(0.335)
 
-            return 1, response_json
-        else:
-            logging.info('response')
-            logging.error('response')
-            return 0, response
+        request_have_done = False
+        while not request_have_done:
+            response = requests.get(VK_URL + method, params=params)
 
-        # request_have_done = False
-        # while not request_have_done:
+            if response.status_code == requests.codes.ok:
+                response_json = response.json()
+                try:
+                    error_json = response_json['error']
+                    if error_json['error_code'] == 6: #  error_msg: Too many requests per second
+                        # logging.error('Requests error: Too many requests per second')
+                        continue # repeat request
+                    else:
+                        return 0, response_json
+                except KeyError:
+                    request_have_done = True
+                    # logging.error(response_json)
+                    return 1, response_json
+
+            else: #  response.status_code != requests.codes.ok
+                request_have_done = True
+                logging.info('Requests error')
+                logging.error('Requests error')
+                logging.error('_do_vk_request status_code -> {}'.format(response.status_code))
+                return 0, response
+
         #
         #     logging.info('raise_for_status -> {}'.format(response.raise_for_status()))
         #     continue
