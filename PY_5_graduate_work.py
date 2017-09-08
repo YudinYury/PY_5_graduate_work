@@ -292,8 +292,8 @@ class VkFriends():
         # print(response_json)
         group_list = response_json['items']
 
-        print('Len of new "group_list" -> {}'.format(len(group_list)))
-        print('Len of "root_friend_groups_set" -> {}'.format(len(self.root_friend_groups_set)))
+        # print('Len of new "group_list" -> {}'.format(len(group_list)))
+        # print('Len of "root_friend_groups_set" -> {}'.format(len(self.root_friend_groups_set)))
 
         for group in group_list:
             vk_group = {
