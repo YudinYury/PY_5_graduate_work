@@ -395,8 +395,8 @@ class VkFriends():
 
             else: #  response.status_code != requests.codes.ok
                 request_have_done = True
-                logging.info('Requests error')
-                logging.error('Requests error')
+                logging.info('Requests error: response.status_code -> '.format(response.status_code))
+                logging.error('Requests error: response.status_code -> '.format(response.status_code))
                 logging.error('_do_vk_request status_code -> {}'.format(response.status_code))
                 return 0, response
 
