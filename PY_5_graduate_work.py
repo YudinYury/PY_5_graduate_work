@@ -224,8 +224,8 @@ class VkFriends():
     def make_different_group_list(self):
         counter = 0
         for friend_id in self.root_friends_id_set:
-            if counter % 10 == 0:
-                print('Find exclusive groups: {} from {}'.format(counter, len(self.root_friends_id_set)))
+            # if counter % 10 == 0:
+            #     print('Find exclusive groups: {} from {}'.format(counter, len(self.root_friends_id_set)))
             friend_groups_set_num, friend_groups_set = self._any_make_groups_list(vk_id=friend_id)
             counter += 1
             if friend_groups_set_num == 0:
@@ -414,7 +414,7 @@ def main():
     tim_leary.make_root_friend_id_list()
 
     tim_leary.root_friend_make_groups_list()
-    tim_leary.print_root_user_info()
+    # tim_leary.print_root_user_info()
     tim_leary.make_different_group_list()
 
     tim_leary.make_report_to_file()
