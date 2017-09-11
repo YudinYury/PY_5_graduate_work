@@ -57,7 +57,6 @@ import sys
 import requests
 
 from config import VK_ACCESS_TOKEN
-from config import root_vk_id  #  root_vk_id = '5030613'
 
 # levels (from low to high): DEBUG -> INFO -> WARNING -> ERROR -> CRITICAL.
 logging.basicConfig(level=logging.ERROR, format='[line:%(lineno)d]# %(asctime)s * %(levelname)s *** %(message)s')
@@ -412,8 +411,11 @@ def main():
     # root_vk_id = 50032764534200241237464765874659873465347856  # test ID
     try:
         root_vk_id = sys.argv[1]
-    except:
-        tim_leary = VkFriends(root_vk_id) #  root_vk_id = '5030613' is tim_leary
+        print('No arguments')
+    except IndexError:
+        root_vk_id = '5030613'  #  root_vk_id = '5030613' is tim_leary
+
+    tim_leary = VkFriends(root_vk_id)
 
     tim_leary.make_root_friend_id_list()
 
