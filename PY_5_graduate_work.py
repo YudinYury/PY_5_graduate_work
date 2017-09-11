@@ -415,7 +415,6 @@ def main():
     # root_vk_id = 50032764534200241237464765874659873465347856  # test ID
     try:
         root_vk_id = sys.argv[1]
-        print('No arguments')
     except IndexError:
         root_vk_id = '5030613'  #  root_vk_id = '5030613' is tim_leary
 
