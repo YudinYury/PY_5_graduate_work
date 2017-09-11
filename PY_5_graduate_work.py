@@ -52,6 +52,7 @@
 import json
 import logging
 from time import sleep
+import sys
 
 import requests
 
@@ -409,7 +410,10 @@ class VkFriends():
 
 def main():
     # root_vk_id = 50032764534200241237464765874659873465347856  # test ID
-    tim_leary = VkFriends(root_vk_id) #  root_vk_id = '5030613' is tim_leary
+    try:
+        root_vk_id = sys.argv[1]
+    except:
+        tim_leary = VkFriends(root_vk_id) #  root_vk_id = '5030613' is tim_leary
 
     tim_leary.make_root_friend_id_list()
 
