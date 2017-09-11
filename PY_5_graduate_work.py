@@ -382,6 +382,10 @@ class VkFriends():
                 logging.error('ConnectionError: response.status_code -> '.format(response.status_code))
                 logging.error('Response is: {content}'.format(content=err.response.content))
                 sleep(2)
+            except requests.exceptions.HTTPError as err:  #  ConnectionError
+                logging.error('HTTPError: response.status_code -> '.format(response.status_code))
+                logging.error('Response is: {content}'.format(content=err.response.content))
+                sleep(2)
 
             else:
                 response.raise_for_status()
