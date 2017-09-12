@@ -60,14 +60,13 @@ from config import VK_ACCESS_TOKEN
 
 # levels (from low to high): DEBUG -> INFO -> WARNING -> ERROR -> CRITICAL.
 logging.basicConfig(level=logging.WARNING, format='[line:%(lineno)d]# %(asctime)s * %(levelname)s *** %(message)s')
-# logging.basicConfig(level=logging.CRITICAL, format='[line:%(lineno)d]# %(asctime)s * %(levelname)s ***  %(message)s')
 # logging.basicConfig(level=logging.DEBUG, format=u'[LINE:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s')
 # logging.basicConfig(format=u'%(levelname)-8s [%(asctime)s] %(message)s', level=logging.DEBUG,
 #                     filename=u'graduate_work.log')
 
 VK_URL = 'https://api.vk.com/method/'
 VK_VERSION = 5.68
-SHORT_RUN = False # switcher for short running way - check 117 friends instead of 834 friends
+SHORT_RUN = False # switcher for short running way - if SHORT_RUN = True then program check 117 friends instead of 834 friends
 SHORT_RUN_COUNT = 117
 ERROR_TOO_MANY_REQUESTS = 6
 ERROR_USER_WAS_DELETED_OR_BANNED = 18
@@ -89,19 +88,15 @@ class VkFriends():
     members_count = 0
 
     def __init__(self, vk_id):
-        """
-        https://https://api.vk.com/method/users.get?
-        user_id=<user_id>
-         & access_token=<VK-token>
-         & v=<версия интерфейса>
+        """ https://https://api.vk.com/method/users.get?
         :param vk_id: <int> or <str> user_id.
-        :return: <json> info about user (user_id).
+        :return: info about user (user_id).
         """
         self.root_friend_id = vk_id
         params = self.make_vk_params()
-        execution_code, response_json = self._do_vk_request('users.get', params)
-        response_json = response_json['response'][0]
-        if not response_json :
+        # execution_code, response_json = self._do_vk_request('users.get', params)
+        execution_code, response_json = self._do_vk_users_get_request(params=params)
+        if execution_code == 0:
             print('Root friend ID is incorrect. Bye ...')
             exit(0)
         elif response_json['first_name'] == 'DELETED':
@@ -114,8 +109,58 @@ class VkFriends():
             logging.debug('response_json -> {}'.format(response_json))
             print('Root friend {} is founded.'.format(self.root_friend_id))
 
+    def _do_vk_users_get_request(self, params):
+        execution_code, response_json = self._do_vk_request('users.get', params)
+        if 'response' in response_json:
+            response_json = response_json['response'][0]
+            return 1, response_json
+        else:
+            return 0, response_json
+
+
+    def _do_vk_request(self, method, params):
+        """
+        https://https://api.vk.com/method/?
+         & access_token=<VK-token>
+         & v=<версия интерфейса>
+        :param method=<vk request metod>: <str>
+        :return: <json> response.
+        """
+        any_vk_metods = ['users.get', 'friends.get', 'groups.get', 'groups.getMembers']
+        logging.info('_do_vk_request() -> {}'.format(method))
+        if not method in any_vk_metods:
+            print('You try to call incorrect request "{}"'.format(method))
+            return 0
+
+        # self.print_dot()
+        request_have_done = False
+        while not request_have_done:
+            try:
+                response = requests.get(VK_URL + method, params=params)
+            except requests.exceptions.ConnectionError as err:  #  ConnectionError
+                logging.warning('ConnectionError: response.status_code -> {}'.format(response.status_code))
+                logging.warning('Response is: {content}'.format(content=err.response.content))
+                sleep(2)
+            except requests.exceptions.HTTPError as err:  #  ConnectionError
+                logging.warning('HTTPError: response.status_code -> '.format(response.status_code))
+                logging.warning('Response is: {content}'.format(content=err.response.content))
+                sleep(2)
+
+            else:
+                if response.status_code == requests.codes.ok:
+                    response_json = response.json()
+                    if 'error' in response_json:
+                        logging.info('Requests error: response.status_code -> {}'.format(response.status_code))
+                        logging.info('_do_vk_request status_code -> {}'.format(response.status_code))
+                        logging.info(response_json)
+                        if response_json['error']['error_code'] == ERROR_TOO_MANY_REQUESTS:
+                            continue
+                        return 0, response_json
+                    request_have_done = True
+                    return 1, response_json
+
+
     def print_root_user_info(self):
-        print('--------- info about root friend ---------')
         print('Name: {} {}'.format(self.root_friend_first_name, self.root_friend_last_name))
         print('friend_count = {}'.format(self.root_friends_count))
         print('groups_count = {}'.format(self.groups_count))
@@ -129,29 +174,9 @@ class VkFriends():
         params.update(kwargs)
         return params
 
-    def print_dot(self):
-        """print "progress bar" from a lot of dot
-        30 dots - border for clearing "progress bar"
-        """
-        self.dot_count += 1
-        if self.dot_count % self.max_dot_count == 0:
-            print('')
-        else:
-            print('.', end='')
-
-    def _do_vk_users_get_request(self, params):
-        response = self._do_vk_request(self, 'users.get', params)
-        if response.status_code == requests.codes.ok:
-            response_json = response.json()['response'][0]
-        else:
-            return 0
-        if response_json['first_name'] == 'DELETED':
-            print('Root user was DELETED.')
-            return 0
-        else:
-            return response_json
-
     def root_friend_make_groups_list(self):
+        """make list of groups by root_friend (tim_leary)
+        """
         groups_count, root_friend_groups_set = self._any_make_groups_list(self.root_friend_id)
         if groups_count == 0:
             logging.debug('root_friend_make_groups_set() not done')
@@ -162,6 +187,8 @@ class VkFriends():
         return 1
 
     def _any_make_groups_list(self, vk_id):
+        """make list of groups for any user
+        """
         params = self.make_vk_params(user_id=vk_id)
         execution_code, response_json = self._do_vk_groups_get_request(params)
         if execution_code == 0:
@@ -178,7 +205,7 @@ class VkFriends():
         try:
             response_json = response_json['response']
             return 1, response_json
-        except TypeError as err:
+        except TypeError:
             logging.error(u'TypeError in _do_vk_groups_get_request(): vk_id: {}, error code: {}, error_msg: {}'.format(
                                                                     params['user_id'],
                                                                     response_json['error']['error_code'],
@@ -190,7 +217,7 @@ class VkFriends():
                                                                    response_json['error']['error_msg']))
             return 0, response_json['error']
 
-        except KeyError as err:  # for  LookupError
+        except KeyError:  # for  LookupError
             logging.info(u'KeyError in _do_vk_groups_get_request(): vk_id: {}, error code: {}, error_msg: {}'.format(
                                                                     params['user_id'],
                                                                     response_json['error']['error_code'],
@@ -260,7 +287,6 @@ class VkFriends():
         finally:
             return execution_code, response_json
 
-
     def make_report_to_file(self):
         print('Making a report.')
         params = self.make_vk_params(extended=1)
@@ -287,7 +313,6 @@ class VkFriends():
 
         print('Have done.')
 
-
     def _get_group_members_count(self, vk_group_type):
         """ add with members_count of vk_group to vk_group <vk_group type>
         :param vk_group_type: <vk_group type>.
@@ -311,60 +336,17 @@ class VkFriends():
         else:
             return 1, vk_group_type
 
-    def _do_vk_request(self, method, params):
-        """
-        https://https://api.vk.com/method/?
-         & access_token=<VK-token>
-         & v=<версия интерфейса>
-        :param method=<vk request metod>: <str>
-        :return: <json> response.
-        """
-        any_vk_metods = ['users.get', 'friends.get', 'groups.get', 'groups.getMembers']
-        logging.info('_do_vk_request() -> {}'.format(method))
-        if not method in any_vk_metods:
-            print('You try to call incorrect request "{}"'.format(method))
-            return 0
-
-        # self.print_dot()
-        request_have_done = False
-        while not request_have_done:
-            try:
-                response = requests.get(VK_URL + method, params=params)
-            except requests.exceptions.ConnectionError as err:  #  ConnectionError
-                logging.warning('ConnectionError: response.status_code -> {}'.format(response.status_code))
-                logging.warning('Response is: {content}'.format(content=err.response.content))
-                sleep(2)
-            except requests.exceptions.HTTPError as err:  #  ConnectionError
-                logging.warning('HTTPError: response.status_code -> '.format(response.status_code))
-                logging.warning('Response is: {content}'.format(content=err.response.content))
-                sleep(2)
-
-            else:
-                if response.status_code == requests.codes.ok:
-                    response_json = response.json()
-                    if 'error' in response_json:
-                        logging.info('Requests error: response.status_code -> {}'.format(response.status_code))
-                        logging.info('_do_vk_request status_code -> {}'.format(response.status_code))
-                        logging.info(response_json)
-                        if response_json['error']['error_code'] == ERROR_TOO_MANY_REQUESTS:
-                            continue
-                        return 0, response_json
-                    request_have_done = True
-                    return 1, response_json
-
-
 def main():
-    # root_vk_id = 50032764534200241237464765874659873465347856  # test ID
     try:
         root_vk_id = sys.argv[1]
     except IndexError:
         root_vk_id = '5030613'  #  root_vk_id = '5030613' is tim_leary
+    # root_vk_id = 50032764534200241237464765874659873465347856  # test ID
 
     tim_leary = VkFriends(root_vk_id)
-
     tim_leary.make_root_friend_id_list()
-
     tim_leary.root_friend_make_groups_list()
+
     tim_leary.print_root_user_info()
     tim_leary.make_different_group_list()
 
