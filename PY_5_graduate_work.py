@@ -320,7 +320,7 @@ class VkFriends():
         :return: <json> response.
         """
         any_vk_metods = ['users.get', 'friends.get', 'groups.get', 'groups.getMembers']
-        # logging.info('_do_vk_request() -> {}'.format(method))
+        logging.info('_do_vk_request() -> {}'.format(method))
         if not method in any_vk_metods:
             print('You try to call incorrect request "{}"'.format(method))
             return 0
@@ -344,7 +344,6 @@ class VkFriends():
                     response_json = response.json()
                     if 'error' in response_json:
                         logging.info('Requests error: response.status_code -> {}'.format(response.status_code))
-                        # logging.error('Requests error: response.status_code -> {}'.format(response.status_code))
                         logging.info('_do_vk_request status_code -> {}'.format(response.status_code))
                         logging.info(response_json)
                         if response_json['error']['error_code'] == ERROR_TOO_MANY_REQUESTS:
@@ -352,26 +351,6 @@ class VkFriends():
                         return 0, response_json
                     request_have_done = True
                     return 1, response_json
-
-
-                #     try:
-                #         error_json = response_json['error']
-                #         if error_json['error_code'] == ERROR_TOO_MANY_REQUESTS: #  error_msg: Too many requests per second
-                #             # logging.error('Requests error: Too many requests per second')
-                #             continue # repeat request
-                #         else:
-                #             return 0, response_json
-                #     except KeyError:
-                #         request_have_done = True
-                #         # logging.error(response_json)
-                #         return 1, response_json
-                #
-                # else: #  response.status_code != requests.codes.ok
-                #     request_have_done = True
-                #     logging.info('Requests error: response.status_code -> '.format(response.status_code))
-                #     logging.error('Requests error: response.status_code -> '.format(response.status_code))
-                #     logging.error('_do_vk_request status_code -> {}'.format(response.status_code))
-                #     return 0, response
 
 
 def main():
