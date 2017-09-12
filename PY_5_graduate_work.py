@@ -209,8 +209,8 @@ class VkFriends():
     def make_different_group_list(self):
         counter = 0
         for friend_id in self.root_friends_id_set:
-            # if counter % 10 == 0:
-            #     print('Find exclusive groups: {} from {}'.format(counter, len(self.root_friends_id_set)))
+            if counter % 10 == 0:
+                print('Find exclusive groups: {} friends of {}'.format(counter, len(self.root_friends_id_set)))
             friend_groups_set_num, friend_groups_set = self._any_make_groups_list(vk_id=friend_id)
             counter += 1
             if friend_groups_set_num == 0:
@@ -221,8 +221,8 @@ class VkFriends():
 
         print('Find exclusive groups completed: {} from {}'.format(counter, len(self.root_friends_id_set)))
         self.different_group_set = self.root_friend_groups_set
-        print('Numbers of "tim_leary" exclusive groups: {}'.format(len(self.different_group_set)))
-        logging.debug(u'Numbers of "tim_leary" exclusive groups: {}'.format(len(self.different_group_set)))
+        print('Numbers of "tim_leary" exclusive groups -> {}'.format(len(self.different_group_set)))
+        logging.debug(u'Numbers of "tim_leary" exclusive groups -> {}'.format(len(self.different_group_set)))
         logging.debug(u'different_group_set = {}'.format(self.root_friend_groups_set))
 
     def make_root_friend_id_list(self):
@@ -325,13 +325,13 @@ class VkFriends():
             print('You try to call incorrect request "{}"'.format(method))
             return 0
 
-        self.print_dot()
+        # self.print_dot()
         request_have_done = False
         while not request_have_done:
             try:
                 response = requests.get(VK_URL + method, params=params)
             except requests.exceptions.ConnectionError as err:  #  ConnectionError
-                logging.warning('ConnectionError: response.status_code -> '.format(response.status_code))
+                logging.warning('ConnectionError: response.status_code -> {}'.format(response.status_code))
                 logging.warning('Response is: {content}'.format(content=err.response.content))
                 sleep(2)
             except requests.exceptions.HTTPError as err:  #  ConnectionError
