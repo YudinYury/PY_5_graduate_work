@@ -49,6 +49,7 @@
 
 """
 
+from functools import partial
 import json
 import logging
 from time import sleep
@@ -59,7 +60,7 @@ import requests
 from config import VK_ACCESS_TOKEN
 
 # levels (from low to high): DEBUG -> INFO -> WARNING -> ERROR -> CRITICAL.
-logging.basicConfig(level=logging.WARNING, format='[line:%(lineno)d]# %(asctime)s * %(levelname)s *** %(message)s')
+logging.basicConfig(level=logging.ERROR, format='[line:%(lineno)d]# %(asctime)s * %(levelname)s *** %(message)s')
 # logging.basicConfig(level=logging.DEBUG, format=u'[LINE:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s')
 # logging.basicConfig(format=u'%(levelname)-8s [%(asctime)s] %(message)s', level=logging.DEBUG,
 #                     filename=u'graduate_work.log')
@@ -70,6 +71,9 @@ SHORT_RUN = False # switcher for short running way - if SHORT_RUN = True then pr
 SHORT_RUN_COUNT = 117
 ERROR_TOO_MANY_REQUESTS = 6
 ERROR_USER_WAS_DELETED_OR_BANNED = 18
+STEP_FOR_PRINT_PROGRESS = 5
+MY_ERROR_CODE = 0
+MY_OK_CODE = 1
 
 class VkFriends():
     root_friend_id = None  # root_vk_id = '5030613'
@@ -81,8 +85,6 @@ class VkFriends():
     root_friend_groups_set = None
     different_group_set = None
     vk_group_result_list = []
-    dot_count = 0  # counter for "progress line"
-    max_dot_count = 30
     name = ''
     gid = None
     members_count = 0
@@ -94,9 +96,8 @@ class VkFriends():
         """
         self.root_friend_id = vk_id
         params = self.make_vk_params()
-        # execution_code, response_json = self._do_vk_request('users.get', params)
         execution_code, response_json = self._do_vk_users_get_request(params=params)
-        if execution_code == 0:
+        if execution_code == MY_ERROR_CODE:
             print('Root friend ID is incorrect. Bye ...')
             exit(0)
         elif response_json['first_name'] == 'DELETED':
@@ -111,40 +112,32 @@ class VkFriends():
 
     def _do_vk_users_get_request(self, params):
         execution_code, response_json = self._do_vk_request('users.get', params)
-        if 'response' in response_json:
-            response_json = response_json['response'][0]
-            return 1, response_json
+        if execution_code == MY_OK_CODE:
+            return execution_code, response_json['response'][0]
         else:
-            return 0, response_json
+            return execution_code, response_json
 
 
     def _do_vk_request(self, method, params):
-        """
+        """return result of requests to VK
         https://https://api.vk.com/method/?
          & access_token=<VK-token>
          & v=<версия интерфейса>
         :param method=<vk request metod>: <str>
         :return: <json> response.
         """
-        any_vk_metods = ['users.get', 'friends.get', 'groups.get', 'groups.getMembers']
-        logging.info('_do_vk_request() -> {}'.format(method))
-        if not method in any_vk_metods:
-            print('You try to call incorrect request "{}"'.format(method))
-            return 0
-
-        # self.print_dot()
         request_have_done = False
         while not request_have_done:
             try:
                 response = requests.get(VK_URL + method, params=params)
             except requests.exceptions.ConnectionError as err:  #  ConnectionError
-                logging.warning('ConnectionError: response.status_code -> {}'.format(response.status_code))
-                logging.warning('Response is: {content}'.format(content=err.response.content))
+                logging.warning('ConnectionError. Try to new connect.')
                 sleep(2)
+                continue
             except requests.exceptions.HTTPError as err:  #  ConnectionError
-                logging.warning('HTTPError: response.status_code -> '.format(response.status_code))
-                logging.warning('Response is: {content}'.format(content=err.response.content))
+                logging.warning('HTTPError. Try to new connect.')
                 sleep(2)
+                continue
 
             else:
                 if response.status_code == requests.codes.ok:
@@ -155,12 +148,14 @@ class VkFriends():
                         logging.info(response_json)
                         if response_json['error']['error_code'] == ERROR_TOO_MANY_REQUESTS:
                             continue
-                        return 0, response_json
+                        return MY_ERROR_CODE, response_json
                     request_have_done = True
-                    return 1, response_json
+                    return MY_OK_CODE, response_json
 
 
     def print_root_user_info(self):
+        """print info about root user
+        """
         print('Name: {} {}'.format(self.root_friend_first_name, self.root_friend_last_name))
         print('friend_count = {}'.format(self.root_friends_count))
         print('groups_count = {}'.format(self.groups_count))
@@ -174,27 +169,27 @@ class VkFriends():
         params.update(kwargs)
         return params
 
-    def root_friend_make_groups_list(self):
+    def root_friend_make_groups_set(self):
         """make list of groups by root_friend (tim_leary)
         """
-        groups_count, root_friend_groups_set = self._any_make_groups_list(self.root_friend_id)
+        groups_count, root_friend_groups_set = self._any_make_groups_set(self.root_friend_id)
         if groups_count == 0:
             logging.debug('root_friend_make_groups_set() not done')
-            return 0
+            return MY_ERROR_CODE
 
         self.groups_count = groups_count
         self.root_friend_groups_set = root_friend_groups_set
-        return 1
+        return MY_OK_CODE
 
-    def _any_make_groups_list(self, vk_id):
+    def _any_make_groups_set(self, vk_id):
         """make list of groups for any user
         """
         params = self.make_vk_params(user_id=vk_id)
         execution_code, response_json = self._do_vk_groups_get_request(params)
-        if execution_code == 0:
+        if execution_code == MY_ERROR_CODE :
             logging.info('Error in _any_make_groups_set -> vk_id -> {}'.format(vk_id))
             logging.info(response_json)
-            return 0, response_json
+            return execution_code, response_json
         else:
             groups_count = response_json['count']
             root_friend_groups_set = set(response_json['items'])
@@ -202,57 +197,34 @@ class VkFriends():
 
     def _do_vk_groups_get_request(self, params):
         execution_code, response_json = self._do_vk_request('groups.get', params)
-        try:
-            response_json = response_json['response']
-            return 1, response_json
-        except TypeError:
-            logging.error(u'TypeError in _do_vk_groups_get_request(): vk_id: {}, error code: {}, error_msg: {}'.format(
-                                                                    params['user_id'],
-                                                                    response_json['error']['error_code'],
-                                                                    response_json['error']['error_msg']))
+        if execution_code == MY_OK_CODE:
+            return MY_OK_CODE, response_json['response']
+        else:
             if response_json['error']['error_code'] == ERROR_USER_WAS_DELETED_OR_BANNED:
-                return 0, response_json['error']
+                return MY_ERROR_CODE, response_json['error']
             logging.debug(
                 u'vk_id: {}, error code: {}, error_msg: {}'.format(params['user_id'], response_json['error']['error_code'],
                                                                    response_json['error']['error_msg']))
-            return 0, response_json['error']
+            return MY_ERROR_CODE, response_json['error']
 
-        except KeyError:  # for  LookupError
-            logging.info(u'KeyError in _do_vk_groups_get_request(): vk_id: {}, error code: {}, error_msg: {}'.format(
-                                                                    params['user_id'],
-                                                                    response_json['error']['error_code'],
-                                                                    response_json['error']['error_msg']))
-            if response_json['error']['error_code'] == ERROR_USER_WAS_DELETED_OR_BANNED:
-                logging.debug('ID={} -> {}'.format(params['user_id'], response_json['error']['error_msg']))
-                return 0, response_json['error']
-            logging.debug(
-                u'vk_id: {}, error code: {}, error_msg: {}'.format(params['user_id'], response_json['error']['error_code'],
-                                                                   response_json['error']['error_msg']))
-            return 0, response_json['error']
-        except:
-            logging.error(u'Неизвестная ошибка')
-            return 0, response_json['error']
 
     def make_different_group_list(self):
-        counter = 0
-        for friend_id in self.root_friends_id_set:
-            if counter % 10 == 0:
+        for counter, friend_id in enumerate(self.root_friends_id_set):
+            if counter % STEP_FOR_PRINT_PROGRESS == 0:
                 print('Find exclusive groups: {} friends of {}'.format(counter, len(self.root_friends_id_set)))
-            friend_groups_set_num, friend_groups_set = self._any_make_groups_list(vk_id=friend_id)
-            counter += 1
+            friend_groups_set_num, friend_groups_set = self._any_make_groups_set(vk_id=friend_id)
             if friend_groups_set_num == 0:
                 logging.info('root_friend_make_groups_set() not done, Error = {}'.format(friend_groups_set_num))
                 continue
             else:
                 self.root_friend_groups_set.difference_update(friend_groups_set)
 
-        print('Find exclusive groups completed: {} from {}'.format(counter, len(self.root_friends_id_set)))
+        print('Find exclusive groups completed.')
         self.different_group_set = self.root_friend_groups_set
-        print('Numbers of "tim_leary" exclusive groups -> {}'.format(len(self.different_group_set)))
-        logging.debug(u'Numbers of "tim_leary" exclusive groups -> {}'.format(len(self.different_group_set)))
-        logging.debug(u'different_group_set = {}'.format(self.root_friend_groups_set))
+        print('Numbers of "tim_leary" exclusive groups -> {}'.format(len(self.root_friend_groups_set)))
+        logging.debug(u'Numbers of "tim_leary" exclusive groups -> {}'.format(len(self.root_friend_groups_set)))
 
-    def make_root_friend_id_list(self):
+    def make_root_friend_id_set(self):
         """
         https://api.vk.com/method/users.get?
         user_id=<user_id> User, for which a list of friends is created
@@ -277,15 +249,15 @@ class VkFriends():
 
     def _do_vk_friends_get_request(self, params):
         execution_code, response_json = self._do_vk_request('friends.get', params)
-        logging.info('_do_vk_friends_get_request: execution_code -> {}'.format(execution_code))
+        logging.warning('_do_vk_friends_get_request: execution_code -> {}'.format(execution_code))
         logging.debug('response_json -> {}'.format(response_json))
-        try:
-            response_json = response_json['response']
-        except KeyError:
-            response_json = response_json['error']
-            execution_code = 0
-        finally:
-            return execution_code, response_json
+
+        if execution_code == MY_OK_CODE:
+            logging.warning('_do_vk_friends_get_request: try response_json =  after execution_code -> {}'.format(execution_code))
+            return execution_code, response_json['response']
+        else:
+            logging.warning('_do_vk_friends_get_request: except KeyError after execution_code -> {}'.format(execution_code))
+            return execution_code, response_json['error']
 
     def make_report_to_file(self):
         print('Making a report.')
@@ -307,7 +279,7 @@ class VkFriends():
                 if execution_code == 1:
                     self.vk_group_result_list.append(new_group)
 
-        print('Saving report to file.')
+        print('Saving report to file "{}".'.format('groups.json'))
         with open('groups.json', 'w', encoding='utf-8') as f:  # , encoding='utf-8'
             json.dump(self.vk_group_result_list, f, ensure_ascii=False)
 
@@ -321,20 +293,12 @@ class VkFriends():
         params = self.make_vk_params(extended=1, group_id=vk_group_type['gid'])
         execution_code, response_json = self._do_vk_request('groups.getMembers', params=params)
 
-        try:
+        if execution_code == MY_OK_CODE:
             vk_group_type['members_count'] = response_json['response']['count']
-        except KeyError:
-            logging.error('KeyError in "vk_group[members_count] = response_json[response][count]"')
-            logging.error('get_group_members_count() -> {}'.format(params['group_id']))
-            logging.error(response_json)
-            return 0
-        except TypeError:
-            logging.error('TypeError in "vk_group[members_count] = response_json[response][count]"')
-            logging.error(response_json)
-
-            return 0, response_json
+            return execution_code, vk_group_type
         else:
-            return 1, vk_group_type
+            return execution_code, response_json
+
 
 def main():
     try:
@@ -344,8 +308,8 @@ def main():
     # root_vk_id = 50032764534200241237464765874659873465347856  # test ID
 
     tim_leary = VkFriends(root_vk_id)
-    tim_leary.make_root_friend_id_list()
-    tim_leary.root_friend_make_groups_list()
+    tim_leary.make_root_friend_id_set()
+    tim_leary.root_friend_make_groups_set()
 
     tim_leary.print_root_user_info()
     tim_leary.make_different_group_list()
