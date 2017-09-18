@@ -309,7 +309,7 @@ def main():
     except IndexError:
         root_vk_id = '5030613'  #  root_vk_id = '5030613' is tim_leary
     # root_vk_id = 50032764534200241237464765874659873465347856  # test ID
-    root_vk_id = 5003276453420024123  # test ID
+    # root_vk_id = 5003276453420024123  # test ID
 
     tim_leary = VkFriends(root_vk_id)
     tim_leary.make_root_friend_id_set()
