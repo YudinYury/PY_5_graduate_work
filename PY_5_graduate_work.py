@@ -49,7 +49,6 @@
 
 """
 
-from functools import partial
 import json
 import logging
 from time import sleep
@@ -61,7 +60,6 @@ from config import VK_ACCESS_TOKEN
 
 # levels (from low to high): DEBUG -> INFO -> WARNING -> ERROR -> CRITICAL.
 logging.basicConfig(level=logging.ERROR, format='[line:%(lineno)d]# %(asctime)s * %(levelname)s *** %(message)s')
-# logging.basicConfig(level=logging.DEBUG, format=u'[LINE:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s')
 # logging.basicConfig(format=u'%(levelname)-8s [%(asctime)s] %(message)s', level=logging.DEBUG,
 #                     filename=u'graduate_work.log')
 
@@ -308,8 +306,8 @@ def main():
         root_vk_id = sys.argv[1]
     except IndexError:
         root_vk_id = '5030613'  #  root_vk_id = '5030613' is tim_leary
-    # root_vk_id = 50032764534200241237464765874659873465347856  # test ID
-    # root_vk_id = 5003276453420024123  # test ID
+    # root_vk_id = 50032764534200241237464765874659873465347856  # test ID#1
+    # root_vk_id = 5003276453420024123  # test ID#2
 
     tim_leary = VkFriends(root_vk_id)
     tim_leary.make_root_friend_id_set()
