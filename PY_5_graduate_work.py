@@ -209,6 +209,9 @@ class VkFriends():
 
 
     def make_different_group_list(self):
+        if self.root_friends_count == 0:
+            print('Root friend have no friends. Bye ...')
+            exit(0)
         for counter, friend_id in enumerate(self.root_friends_id_set):
             if counter % STEP_FOR_PRINT_PROGRESS == 0:
                 print('Find exclusive groups: {} friends of {}'.format(counter, len(self.root_friends_id_set)))
@@ -306,6 +309,7 @@ def main():
     except IndexError:
         root_vk_id = '5030613'  #  root_vk_id = '5030613' is tim_leary
     # root_vk_id = 50032764534200241237464765874659873465347856  # test ID
+    root_vk_id = 5003276453420024123  # test ID
 
     tim_leary = VkFriends(root_vk_id)
     tim_leary.make_root_friend_id_set()
