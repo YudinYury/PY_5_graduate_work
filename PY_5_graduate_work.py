@@ -81,11 +81,7 @@ class VkFriends():
     root_friends_id_set = None
     groups_count = 0
     root_friend_groups_set = None
-    # different_group_set = None
     vk_group_result_list = []
-    # name = ''
-    # gid = None
-    # members_count = 0
 
     def __init__(self, vk_id):
         """ https://https://api.vk.com/method/users.get?
@@ -290,20 +286,6 @@ class VkFriends():
             json.dump(self.vk_group_result_list, f, ensure_ascii=False)
 
         print('Have done.')
-
-    # def _get_group_members_count(self, vk_group_type):
-    #     """ add with members_count of vk_group to vk_group <vk_group type>
-    #     :param vk_group_type: <vk_group type>.
-    #     :return: struct <vk_group type> with members_count of vk_group.
-    #     """
-    #     params = self.make_vk_params(extended=1, group_id=vk_group_type['gid'])
-    #     execution_code, response_json = self._do_vk_request('groups.getMembers', params=params)
-    #
-    #     if execution_code == MY_OK_CODE:
-    #         vk_group_type['members_count'] = response_json['response']['count']
-    #         return execution_code, vk_group_type
-    #     else:
-    #         return execution_code, response_json
 
 
 def main():
