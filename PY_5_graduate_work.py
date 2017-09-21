@@ -200,9 +200,11 @@ class VkFriends():
         else:
             if response_json['error']['error_code'] == ERROR_USER_WAS_DELETED_OR_BANNED:
                 return MY_ERROR_CODE, response_json['error']
-            logging.debug(
-                u'vk_id: {}, error code: {}, error_msg: {}'.format(params['user_id'], response_json['error']['error_code'],
-                                                                   response_json['error']['error_msg']))
+
+            logging.debug(u'vk_id: {}, error code: {}, error_msg: {}'.format(
+                                                                        params['user_id'],
+                                                                        response_json['error']['error_code'],
+                                                                        response_json['error']['error_msg']))
             return MY_ERROR_CODE, response_json['error']
 
 
@@ -210,6 +212,7 @@ class VkFriends():
         if self.root_friends_count == 0:
             print('Root friend have no friends. Bye ...')
             exit(0)
+
         for counter, friend_id in enumerate(self.root_friends_id_set):
             if counter % STEP_FOR_PRINT_PROGRESS == 0:
                 print('Find exclusive groups: {} friends of {}'.format(counter, len(self.root_friends_id_set)))
@@ -222,7 +225,10 @@ class VkFriends():
 
         print('Find exclusive groups completed.')
         self.different_group_set = self.root_friend_groups_set
-        print('Numbers of "tim_leary" exclusive groups -> {}'.format(len(self.root_friend_groups_set)))
+        print('{} {} is member of {} exclusive groups'.format(
+                                                        self.root_friend_first_name,
+                                                        self.root_friend_last_name,
+                                                        len(self.root_friend_groups_set)))
         logging.debug(u'Numbers of "tim_leary" exclusive groups -> {}'.format(len(self.root_friend_groups_set)))
 
     def make_root_friend_id_set(self):
@@ -262,7 +268,7 @@ class VkFriends():
 
     def make_report_to_file(self):
         print('Making a report.')
-        params = self.make_vk_params(extended=1)
+        params = self.make_vk_params(extended=1, fields='members_count')
         execution_code, response_json = self._do_vk_groups_get_request(params=params)
         group_list = response_json['items']
 
@@ -276,9 +282,8 @@ class VkFriends():
             if group['id'] in self.different_group_set:
                 vk_group['gid'] = group['id']
                 vk_group['name'] = group['name']
-                execution_code, new_group = self._get_group_members_count(vk_group)
-                if execution_code == 1:
-                    self.vk_group_result_list.append(new_group)
+                vk_group['members_count'] = group['members_count']
+                self.vk_group_result_list.append(vk_group)
 
         print('Saving report to file "{}".'.format('groups.json'))
         with open('groups.json', 'w', encoding='utf-8') as f:  # , encoding='utf-8'
